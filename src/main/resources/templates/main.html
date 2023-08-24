@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Title</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+
+<a id="wallet" type="button" class="btn btn-primary btn-sm "  onclick="wallet()">지갑연동</a>
+<div id="adress"></div>
+<a id="check" type="button" class="btn btn-primary btn-sm "  onclick="check()">잔액확인</a>
+<div id="money"></div>
+<a id="kklay" type="button" class="btn btn-primary btn-sm "  onclick="kklay()">Klay 전송</a>
+
+<script >
+
+window.klaytn.enable();
+let accounts;
+let network;
+let val;
+klaytn.on('accountsChanged', function(acc) {
+    accounts = acc; //내 계정정보
+
+    val = caver.klay.getBalance(accounts[0]).then();
+    console.log(val);
+});
+
+klaytn.on('networkChanged', function(net) {
+  network=net;
+  if(network==1001){network='Baobab 테스트넷'}
+  if(network==8217){network='메인 네트워크'}
+});
+
+
+
+function wallet(){
+$("#adress").empty();
+  document.getElementById("adress").insertAdjacentHTML(
+    'beforeend',
+    `
+    <p> 주소 : ${accounts}</p>
+    <p> 네트워크 : ${network}</p>
+    `
+)};
+
+function check(){
+$("#money").empty();
+val.then(appData => {
+<!--			console.log(appData)-->
+
+  let num = appData.length-18;
+
+  let clay = appData.slice(0,num);
+  if (appData==-1) {clay = 0;}
+  document.getElementById("money").insertAdjacentHTML(
+    'beforeend',
+    `
+    <p> 잔액 : ${clay} Klay</p>
+    `
+    )
+  });
+};
+
+async function saveReceipt(receipt) {
+    try {
+        const response = await $.ajax({
+            type: "POST",
+            url: "/saveReceipt",
+            contentType: "application/json",
+            data: JSON.stringify(receipt)
+        });
+        console.log("Data saved:", response);
+        alert(response);
+    } catch (error) {
+        console.error("Error saving receipt:", error);
+    }
+}
+
+async function kklay() {
+    try {
+        const transaction = await window.caver.klay.sendTransaction({
+            type: 'VALUE_TRANSFER',
+            from: klaytn.selectedAddress,
+            to: '0x7D4Ed04839a986636234B09388D3d97c7d5EA670',
+            value: caver.utils.toPeb('0.1', 'KLAY'),
+            gas: 8000000
+        });
+
+        alert("전송에 성공했습니다.");
+
+        const receipt = await window.caver.klay.getTransactionReceipt(transaction.transactionHash);
+        console.log(receipt);
+
+        if (receipt) {
+            await saveReceipt(receipt); // 영수증을 서버로 전송
+        } else {
+            console.error("Receipt not available yet.");
+        }
+
+    } catch (error) {
+        console.error("Error:", error);
+    }
+}
+
+
+
+
+</script>
+
+</body>
+</html>
